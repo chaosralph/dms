@@ -35,6 +35,11 @@ require __DIR__ . '/templates/header.php';
             <span class="material-icons-round">photo_camera</span>
             Kamera öffnen
         </button>
+        <label class="btn btn-secondary btn-lg" id="cameraFileFallbackBtn" for="cameraFileInput" style="width:100%;justify-content:center;margin-bottom:1rem;cursor:pointer">
+            <span class="material-icons-round">add_a_photo</span>
+            Kamera-App nutzen
+        </label>
+        <input type="file" id="cameraFileInput" accept="image/*,.heic,.heif" capture="environment" onclick="this.value=''" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
         <div class="dms-camera-container" id="cameraContainer">
             <video class="dms-camera-video" id="cameraVideo" autoplay playsinline></video>
             <div class="dms-camera-controls">
@@ -60,7 +65,7 @@ require __DIR__ . '/templates/header.php';
         <h3>Bilder hierher ziehen</h3>
         <p>oder klicke um Dateien auszuwählen</p>
         <p style="font-size:0.75rem;color:var(--text-muted)">JPG, PNG, WebP – max. <?= formatFileSize(MAX_FILE_SIZE) ?> pro Datei</p>
-        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none">
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple style="display:none">
     </div>
 
     <!-- Image Preview List -->

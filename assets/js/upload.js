@@ -15,6 +15,7 @@ const Upload = {
 function initDropzone() {
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
+    const cameraFileInput = document.getElementById('cameraFileInput');
 
     dropzone.addEventListener('click', () => fileInput.click());
 
@@ -37,11 +38,20 @@ function initDropzone() {
         handleFiles(e.target.files);
         e.target.value = '';
     });
+
+    if (cameraFileInput) {
+        cameraFileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+            e.target.value = '';
+        });
+    }
 }
 
 function handleFiles(fileList) {
     for (const file of fileList) {
-        if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
+        const validMime = /^image\/(jpeg|jpg|png|webp|heic|heif)$/i.test(file.type || '');
+        const validExt = /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name || '');
+        if (!validMime && !validExt) {
             showToast(`"${file.name}" ist kein unterstütztes Bildformat`, 'error');
             continue;
         }
@@ -72,11 +82,14 @@ function initCamera() {
     const captureBtn = document.getElementById('captureBtn');
     const switchBtn = document.getElementById('cameraSwitchBtn');
     const closeBtn = document.getElementById('cameraCloseBtn');
+    const fallbackBtn = document.getElementById('cameraFileFallbackBtn');
+    const fallbackInput = document.getElementById('cameraFileInput');
 
     if (!toggle) return;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         toggle.style.display = 'none';
+        if (fallbackBtn && fallbackInput) fallbackBtn.addEventListener('click', () => fallbackInput.click());
         return;
     }
 
@@ -91,6 +104,10 @@ function initCamera() {
     captureBtn.addEventListener('click', capturePhoto);
     switchBtn.addEventListener('click', switchCamera);
     closeBtn.addEventListener('click', stopCamera);
+
+    if (fallbackBtn && fallbackInput) {
+        fallbackBtn.addEventListener('click', () => fallbackInput.click());
+    }
 }
 
 async function startCamera() {
@@ -98,20 +115,32 @@ async function startCamera() {
     const video = document.getElementById('cameraVideo');
     const toggle = document.getElementById('cameraToggle');
 
-    try {
-        Upload.stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: Upload.facingMode,
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-            },
-        });
-        video.srcObject = Upload.stream;
-        container.classList.add('active');
-        toggle.innerHTML = '<span class="material-icons-round">close</span> Kamera schließen';
-    } catch (err) {
-        showToast('Kamera konnte nicht geöffnet werden: ' + err.message, 'error');
+    const facing = { facingMode: Upload.facingMode };
+    const constraintsList = [
+        { video: { ...facing, width: { ideal: 1920 }, height: { ideal: 1080 } } },
+        { video: facing },
+        { video: true },
+    ];
+
+    let lastErr = null;
+    for (const constraints of constraintsList) {
+        try {
+            Upload.stream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = Upload.stream;
+            video.playsInline = true;
+            await video.play().catch(() => {});
+            container.classList.add('active');
+            toggle.innerHTML = '<span class="material-icons-round">close</span> Kamera schließen';
+            return;
+        } catch (err) {
+            lastErr = err;
+        }
     }
+    if (lastErr && (lastErr.name === 'NotAllowedError' || lastErr.name === 'SecurityError')) {
+        showToast('Kamera blockiert. Bitte Browser-Berechtigung auf "Zulassen" setzen oder "Kamera-App nutzen" verwenden.', 'error');
+        return;
+    }
+    showToast('Kamera konnte nicht geöffnet werden: ' + (lastErr && lastErr.message ? lastErr.message : 'Unbekannter Fehler'), 'error');
 }
 
 function stopCamera() {

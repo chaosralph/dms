@@ -3,6 +3,12 @@
 # Verzeichnislisting deaktivieren
 Options -Indexes
 
+# Erlaube Kamera fuer diese App-Origin (wichtig fuer mobile Browser wie Samsung/Chrome)
+<IfModule mod_headers.c>
+    Header always unset Permissions-Policy
+    Header always set Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+</IfModule>
+
 # PHP-Einstellungen (falls erlaubt)
 <IfModule mod_php.c>
     php_value upload_max_filesize 25M
