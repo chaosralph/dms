@@ -1,0 +1,11 @@
+# Kein PHP-Zugriff in Upload-Verzeichnissen
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+
+# Nur Bilder und PDFs erlauben
+<FilesMatch "\.(?!(jpg|jpeg|png|webp|pdf)$)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
