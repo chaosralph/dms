@@ -1,0 +1,27 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Environment / Local settings
+.env
+.env.*
+!.env.example
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Build / Cache / Logs
+*.log
+*.tmp
+*.cache
+
+# Uploads and generated files
+/uploads/*
+!/uploads/.htaccess
+
+# Test / coverage artifacts
+/coverage/
+.phpunit.result.cache
