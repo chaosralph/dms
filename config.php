@@ -10,7 +10,7 @@ define('DB_USER', 'dms_user');
 define('DB_PASS', 'CHANGE_ME');
 define('DB_CHARSET', 'utf8mb4');
 
-define('SITE_URL', 'https://rd.timepro-solutions.de/dms');
+define('SITE_URL', 'https://');
 define('SITE_TITLE', 'DMS - Dokumentenmanagement');
 
 define('UPLOAD_DIR', __DIR__ . '/uploads/');
