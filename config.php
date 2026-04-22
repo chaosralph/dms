@@ -18,7 +18,7 @@ define('ORIGINALS_DIR', UPLOAD_DIR . 'originals/');
 define('PDF_DIR', UPLOAD_DIR . 'pdfs/');
 
 define('MAX_FILE_SIZE', 20 * 1024 * 1024); // 20 MB
-define('ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/webp', 'image/heic']);
+define('ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 define('PDF_AUTHOR', 'RD Formstack Solutions');
 
 define('ITEMS_PER_PAGE', 12);

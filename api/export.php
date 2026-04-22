@@ -36,9 +36,9 @@ if ($id > 0) {
         exit;
     }
 
-    $downloadName = preg_replace('/[^a-zA-Z0-9äöüÄÖÜß\s\-_]/', '', $doc['title']);
-    $downloadName = trim($downloadName) ?: 'Dokument';
-    $downloadName .= '.pdf';
+    $downloadTitle = createFilenameSlug($doc['title'] ?? 'Dokument', 70);
+    $downloadDate = !empty($doc['receipt_date']) ? $doc['receipt_date'] : date('Y-m-d');
+    $downloadName = $downloadDate . '_Beleg_' . $downloadTitle . '.pdf';
 
     header('Content-Type: application/pdf');
     header('Content-Disposition: attachment; filename="' . $downloadName . '"');
@@ -91,10 +91,10 @@ if ($exportAll || $categoryId) {
 
         $folder = $doc['category_name'] ?? 'Ohne Kategorie';
         $folder = preg_replace('/[^a-zA-Z0-9äöüÄÖÜß\s\-_]/', '', $folder);
-        $name = preg_replace('/[^a-zA-Z0-9äöüÄÖÜß\s\-_]/', '', $doc['title']);
-        $name = trim($name) ?: 'Dokument';
+        $name = createFilenameSlug($doc['title'] ?? 'Dokument', 70);
+        $datePrefix = !empty($doc['receipt_date']) ? $doc['receipt_date'] . '_Beleg_' : '';
 
-        $zip->addFile($pdfPath, "$folder/$name.pdf");
+        $zip->addFile($pdfPath, "$folder/$datePrefix$name.pdf");
     }
 
     $zip->close();

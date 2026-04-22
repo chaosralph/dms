@@ -10,11 +10,13 @@ $currentPage = 'upload';
 
 $db = Database::getConnection();
 $categories = $db->query('SELECT * FROM dms_categories ORDER BY sort_order, name')->fetchAll(PDO::FETCH_ASSOC);
+$uploadJsPath = __DIR__ . '/assets/js/upload.js';
+$uploadJsVersion = file_exists($uploadJsPath) ? (string)filemtime($uploadJsPath) : (string)time();
 
 $extraCss = ['https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css'];
 $extraJs = [
     'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js',
-    SITE_URL . '/assets/js/upload.js',
+    SITE_URL . '/assets/js/upload.js?v=' . $uploadJsVersion,
 ];
 
 require __DIR__ . '/templates/header.php';
@@ -26,7 +28,7 @@ require __DIR__ . '/templates/header.php';
             <span class="material-icons-round" style="vertical-align:middle;margin-right:0.5rem;color:var(--primary-light)">add_a_photo</span>
             Neues Dokument erstellen
         </h1>
-        <p>Nimm ein Foto auf oder lade Bilder hoch – sie werden automatisch als PDF gespeichert.</p>
+        <p>Scanne Belege direkt im Browser oder lade Bilder hoch – sie werden automatisch als PDF gespeichert.</p>
     </div>
 
     <!-- Camera Section -->
@@ -35,11 +37,11 @@ require __DIR__ . '/templates/header.php';
             <span class="material-icons-round">photo_camera</span>
             Kamera öffnen
         </button>
-        <label class="btn btn-secondary btn-lg" id="cameraFileFallbackBtn" for="cameraFileInput" style="width:100%;justify-content:center;margin-bottom:1rem;cursor:pointer">
-            <span class="material-icons-round">add_a_photo</span>
-            Kamera-App nutzen
+        <label class="btn btn-secondary btn-lg" id="mobileScanBtn" for="mobileScanInput" style="width:100%;justify-content:center;margin-bottom:1rem;cursor:pointer">
+            <span class="material-icons-round">document_scanner</span>
+            Beleg direkt scannen (Handy)
         </label>
-        <input type="file" id="cameraFileInput" accept="image/*,.heic,.heif" capture="environment" onclick="this.value=''" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+        <input type="file" id="mobileScanInput" accept="image/*,.heic,.heif" capture="environment" onclick="this.value=''" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
         <div class="dms-camera-container" id="cameraContainer">
             <video class="dms-camera-video" id="cameraVideo" autoplay playsinline></video>
             <div class="dms-camera-controls">
@@ -77,6 +79,10 @@ require __DIR__ . '/templates/header.php';
             <div class="dms-form-group">
                 <label class="dms-form-label" for="docTitle">Titel *</label>
                 <input type="text" class="dms-form-input" id="docTitle" name="title" placeholder="z.B. Rechnung Telekom März 2026" required>
+            </div>
+            <div class="dms-form-group">
+                <label class="dms-form-label" for="docReceiptDate">Belegdatum *</label>
+                <input type="date" class="dms-form-input" id="docReceiptDate" name="receipt_date" value="<?= date('Y-m-d') ?>" required>
             </div>
             <div class="dms-form-group">
                 <label class="dms-form-label" for="docCategory">Kategorie</label>

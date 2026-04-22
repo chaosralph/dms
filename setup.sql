@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `dms_categories` (
 CREATE TABLE IF NOT EXISTS `dms_documents` (
     `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `title` VARCHAR(255) NOT NULL,
+    `receipt_date` DATE DEFAULT NULL,
     `description` TEXT DEFAULT NULL,
     `category_id` INT UNSIGNED DEFAULT NULL,
     `pdf_filename` VARCHAR(255) NOT NULL,

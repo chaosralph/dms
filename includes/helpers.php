@@ -23,6 +23,27 @@ function generateFilename(string $extension = 'pdf'): string
     return date('Y-m-d_His') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
 }
 
+function createFilenameSlug(string $value, int $maxLength = 80): string
+{
+    $value = trim($value);
+    $value = str_replace(
+        ['Ä', 'Ö', 'Ü', 'ä', 'ö', 'ü', 'ß'],
+        ['Ae', 'Oe', 'Ue', 'ae', 'oe', 'ue', 'ss'],
+        $value
+    );
+    $value = preg_replace('/[^a-zA-Z0-9]+/', '_', $value) ?? '';
+    $value = trim($value, '_');
+    $value = substr($value, 0, $maxLength);
+
+    return $value !== '' ? $value : 'Dokument';
+}
+
+function generateAccountingPdfFilename(string $title, string $receiptDate): string
+{
+    $slug = createFilenameSlug($title, 70);
+    return $receiptDate . '_Beleg_' . $slug . '_' . bin2hex(random_bytes(3)) . '.pdf';
+}
+
 function formatFileSize(int $bytes): string
 {
     $units = ['B', 'KB', 'MB', 'GB'];

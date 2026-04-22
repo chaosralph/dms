@@ -5,8 +5,12 @@ Options -Indexes
 
 # Erlaube Kamera fuer diese App-Origin (wichtig fuer mobile Browser wie Samsung/Chrome)
 <IfModule mod_headers.c>
-    Header always unset Permissions-Policy
-    Header always set Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    # camera=(self): DMS-Upload / getUserMedia auf derselben Origin erlauben (camera=() blockiert alle Geräte inkl. Samsung)
+    Header set Permissions-Policy "camera=(self), microphone=(), geolocation=()"
 </IfModule>
 
 # PHP-Einstellungen (falls erlaubt)

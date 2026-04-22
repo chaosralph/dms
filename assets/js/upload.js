@@ -10,12 +10,25 @@ const Upload = {
     cropIndex: null,
 };
 
+function dataUrlToFile(dataUrl, fileName) {
+    const parts = dataUrl.split(',');
+    const mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+    const binary = atob(parts[1] || '');
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return new File([bytes], fileName, { type: mime });
+}
+
 // ===== File Selection & Drag/Drop =====
 
 function initDropzone() {
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
-    const cameraFileInput = document.getElementById('cameraFileInput');
+    const mobileScanBtn = document.getElementById('mobileScanBtn');
+    const mobileScanInput = document.getElementById('mobileScanInput');
 
     dropzone.addEventListener('click', () => fileInput.click());
 
@@ -39,20 +52,53 @@ function initDropzone() {
         e.target.value = '';
     });
 
-    if (cameraFileInput) {
-        cameraFileInput.addEventListener('change', (e) => {
+    if (mobileScanInput) {
+        const consumeMobileScanInputFiles = () => {
+            const files = mobileScanInput.files;
+            if (!files || files.length === 0) return;
+            handleFiles(files);
+            mobileScanInput.value = '';
+        };
+
+        if (mobileScanBtn) {
+            mobileScanBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                mobileScanInput.click();
+            });
+        }
+
+        mobileScanInput.addEventListener('change', (e) => {
             handleFiles(e.target.files);
             e.target.value = '';
         });
+
+        mobileScanInput.addEventListener('input', consumeMobileScanInputFiles);
+        window.addEventListener('focus', consumeMobileScanInputFiles);
+        window.addEventListener('pageshow', consumeMobileScanInputFiles);
     }
 }
 
 function handleFiles(fileList) {
-    for (const file of fileList) {
-        const validMime = /^image\/(jpeg|jpg|png|webp|heic|heif)$/i.test(file.type || '');
+    const files = Array.from(fileList || []);
+
+    if (files.length === 0) {
+        showToast('Kein Beleg übernommen. Bitte erneut scannen.', 'error');
+        return;
+    }
+
+    let importedCount = 0;
+
+    for (const file of files) {
+        const mimeType = (file.type || '').toLowerCase();
+        const validMime = mimeType.startsWith('image/');
         const validExt = /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name || '');
-        if (!validMime && !validExt) {
+        const unknownButUsable = !mimeType && file.size > 0;
+        if (!validMime && !validExt && !unknownButUsable) {
             showToast(`"${file.name}" ist kein unterstütztes Bildformat`, 'error');
+            continue;
+        }
+        if (!file.size || file.size <= 0) {
+            showToast(`"${file.name || 'Bild'}" konnte nicht gelesen werden`, 'error');
             continue;
         }
         if (file.size > 20 * 1024 * 1024) {
@@ -60,17 +106,18 @@ function handleFiles(fileList) {
             continue;
         }
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            Upload.images.push({
-                file: file,
-                dataUrl: e.target.result,
-                cropped: false,
-            });
-            renderPreviews();
-            updateFormVisibility();
-        };
-        reader.readAsDataURL(file);
+        Upload.images.push({
+            file: file,
+            dataUrl: URL.createObjectURL(file),
+            cropped: false,
+        });
+        importedCount++;
+    }
+
+    if (importedCount > 0) {
+        renderPreviews();
+        updateFormVisibility();
+        showToast(`${importedCount} Beleg(e) übernommen`, 'success');
     }
 }
 
@@ -82,14 +129,17 @@ function initCamera() {
     const captureBtn = document.getElementById('captureBtn');
     const switchBtn = document.getElementById('cameraSwitchBtn');
     const closeBtn = document.getElementById('cameraCloseBtn');
-    const fallbackBtn = document.getElementById('cameraFileFallbackBtn');
-    const fallbackInput = document.getElementById('cameraFileInput');
 
     if (!toggle) return;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         toggle.style.display = 'none';
-        if (fallbackBtn && fallbackInput) fallbackBtn.addEventListener('click', () => fallbackInput.click());
+        showToast('Live-Kamera wird von diesem Browser nicht unterstützt. Nutze "Beleg direkt scannen (Handy)".', 'error');
+        return;
+    }
+
+    if (!window.isSecureContext) {
+        showToast('Für Live-Kamera ist HTTPS erforderlich. Nutze alternativ "Beleg direkt scannen (Handy)".', 'error');
         return;
     }
 
@@ -104,10 +154,6 @@ function initCamera() {
     captureBtn.addEventListener('click', capturePhoto);
     switchBtn.addEventListener('click', switchCamera);
     closeBtn.addEventListener('click', stopCamera);
-
-    if (fallbackBtn && fallbackInput) {
-        fallbackBtn.addEventListener('click', () => fallbackInput.click());
-    }
 }
 
 async function startCamera() {
@@ -128,6 +174,9 @@ async function startCamera() {
             Upload.stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = Upload.stream;
             video.playsInline = true;
+            video.muted = true;
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('muted', 'true');
             await video.play().catch(() => {});
             container.classList.add('active');
             toggle.innerHTML = '<span class="material-icons-round">close</span> Kamera schließen';
@@ -137,7 +186,7 @@ async function startCamera() {
         }
     }
     if (lastErr && (lastErr.name === 'NotAllowedError' || lastErr.name === 'SecurityError')) {
-        showToast('Kamera blockiert. Bitte Browser-Berechtigung auf "Zulassen" setzen oder "Kamera-App nutzen" verwenden.', 'error');
+        showToast('Kamera blockiert. Browser-Berechtigung auf "Zulassen" setzen oder "Beleg direkt scannen (Handy)" nutzen.', 'error');
         return;
     }
     showToast('Kamera konnte nicht geöffnet werden: ' + (lastErr && lastErr.message ? lastErr.message : 'Unbekannter Fehler'), 'error');
@@ -168,15 +217,23 @@ function capturePhoto() {
     const canvas = document.getElementById('cameraCanvas');
     const ctx = canvas.getContext('2d');
 
+    if (!Upload.stream || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+        showToast('Kamera ist noch nicht bereit. Bitte kurz warten und erneut auslösen.', 'error');
+        return;
+    }
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
     canvas.toBlob((blob) => {
-        const file = new File([blob], `foto_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        const file = blob
+            ? new File([blob], `foto_${Date.now()}.jpg`, { type: 'image/jpeg' })
+            : dataUrlToFile(dataUrl, `foto_${Date.now()}.jpg`);
         Upload.images.push({
             file: file,
-            dataUrl: canvas.toDataURL('image/jpeg', 0.92),
+            dataUrl: dataUrl,
             cropped: false,
         });
         renderPreviews();
@@ -206,6 +263,10 @@ function renderPreviews() {
 }
 
 function removeImage(index) {
+    const removed = Upload.images[index];
+    if (removed && typeof removed.dataUrl === 'string' && removed.dataUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(removed.dataUrl);
+    }
     Upload.images.splice(index, 1);
     renderPreviews();
     updateFormVisibility();
@@ -312,10 +373,13 @@ function initCropControls() {
             });
 
             canvas.toBlob((blob) => {
-                const file = new File([blob], Upload.images[Upload.cropIndex].file.name, { type: 'image/jpeg' });
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                const file = blob
+                    ? new File([blob], Upload.images[Upload.cropIndex].file.name, { type: 'image/jpeg' })
+                    : dataUrlToFile(dataUrl, Upload.images[Upload.cropIndex].file.name);
                 Upload.images[Upload.cropIndex] = {
                     file: file,
-                    dataUrl: canvas.toDataURL('image/jpeg', 0.92),
+                    dataUrl: dataUrl,
                     cropped: true,
                 };
                 renderPreviews();
@@ -347,8 +411,16 @@ function initUploadForm() {
             return;
         }
 
+        const receiptDate = document.getElementById('docReceiptDate').value;
+        if (!receiptDate) {
+            showToast('Bitte ein Belegdatum auswählen', 'error');
+            document.getElementById('docReceiptDate').focus();
+            return;
+        }
+
         const formData = new FormData();
         formData.append('title', title);
+        formData.append('receipt_date', receiptDate);
         formData.append('description', document.getElementById('docDescription').value.trim());
         formData.append('category_id', document.getElementById('docCategory').value);
 
